@@ -39,23 +39,15 @@ class Lexer(object):
 				for word in my_list:
 					if len(word) > 0:
 						current_word = ''
-					# 	for letter in word:
-					# 		if letter not in Lexer.delimiters:
-					# 			current_word += letter
-					# 		if letter in Lexer.delimiters:
-					# 			Lexer.search_and_print(current_word)
-					# 			current_word = ''
-					# 			Lexer.search_and_print(letter)
-					# Lexer.search_and_print(word)
-						for j in range(len(word)):
-							if word[j] in Lexer.delimiters:
-								if word[j] == "]":
-									Lexer.search_and_print(word[j-2:j])
-									print word[j] + '\t' + str(len(word[j])) + '\t' + "is one delimiter"
-								else:
-									Lexer.search_and_print(word[:j])
-									print word[j] + '\t' + str(len(word[j])) + '\t' + "is one delimiter"							
-						Lexer.search_and_print(word)	
+						for letter in word:
+							if letter not in Lexer.delimiters:
+								current_word += letter
+							elif letter in Lexer.delimiters:
+								if len(current_word) > 0:
+									Lexer.search_and_print(current_word)
+									current_word = ''
+								print letter + '\t' + str(len(letter)) + '\t' + "is one delimiter"
+						Lexer.search_and_print(word)
 				print
 		file.close()
 
