@@ -1,11 +1,8 @@
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
 import re
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '../SyntaxAnal'))
+from Lexem_table import Lexem_table
 from Processor import Processor
-from Line import Line
 
 class Lexer(object):
 
@@ -74,15 +71,10 @@ class Lexer(object):
 				# 		Lexer.search_and_print(word, str(counter))
 				# 		counter += 1
 				if len(my_list[0]) > 0:
-					new = Processor(my_list)
-					new.parse_string_to_line()
-
-		result = u'\n'.join((new.string_for_print.upper(), new.print_table_of_segments(), new.print_table_of_identifiers())).encode('utf-8').strip()
-		print new.string_for_print.upper()
-		print new.print_table_of_segments()
-		print new.print_table_of_identifiers()
-		Line.add_to_file(result)
-
+					tesla_loshara = Processor(my_list)
+					tesla_loshara.parse_string_to_line()
+		print tesla_loshara.string_for_print.upper()
+		#Processor.analyze()
 		file.close()
 
 Lexer().read_file()

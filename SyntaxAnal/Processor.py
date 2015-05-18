@@ -1,7 +1,7 @@
 from Line import Line
 from Identifier import Identifier
 from Useful_lexems import Useful_lexems
-
+# import unicodedata
 import re
 
 class Processor(object):
@@ -12,6 +12,7 @@ class Processor(object):
 	is_segment_closed = True
 	segment_value = None
 	list_of_identifier = []
+	list_of_segment = []
 
 	def __init__(self, line_string):
 		self.line_string = line_string
@@ -20,6 +21,49 @@ class Processor(object):
 		self.offset = 0
 		self.identifiers = []
 		self.second = True
+
+	def print_table_of_identifiers(self):
+		s = "Name:" + "\t" + "Type:" + "\t" + "Value:" + "\t" + "Attr:" + "\n"
+		for i in Processor.list_of_identifier:
+			s += i.name + "\t" + i.ident_type + "\t" + "0" * (4 - len(hex(i.offset)[2:])) + hex(i.offset)[2:] + "\t" + str(i.attribute) + "\n"
+		return s
+
+	def print_table_of_segments(self):
+		print
+		s = "Name:" + "\t" + "Length:" + "\n"
+		for i in Processor.list_of_segment:
+			s += i.name + "\t" + i.ident_type  + "0" * (4 - len(hex(i.offset)[2:])) + hex(i.offset)[2:] + "\n"
+		return s
+
+	def table_of_identifiers(self, name, typpe):
+		if self.is_identifier_unique(name):
+			if typpe == "DB":
+				new_identifier = Identifier(name, "L BYTE", Processor.offset, attribute = Processor.segment_value)
+			elif typpe == "DW":
+				new_identifier = Identifier(name, "L WORD", Processor.offset, attribute = Processor.segment_value)
+			elif typpe == "DD":
+				new_identifier = Identifier(name, "L DWORD", Processor.offset, attribute = Processor.segment_value)	
+			Processor.list_of_identifier.append(new_identifier)
+
+	def table_of_segments(self, name):
+		if self.is_segment_unique(name):
+			new_identifier = Identifier(name, "", Processor.offset)
+			Processor.list_of_segment.append(new_identifier)
+
+	def is_segment_unique(self, name):
+		if len(Processor.list_of_segment) > 0:
+			for i in Processor.list_of_segment:
+				if i.name == name:
+					i.offset = Processor.offset
+					return False
+		return True
+
+	def is_identifier_unique(self, name):
+		if len(Processor.list_of_segment) > 0:
+			for i in Processor.list_of_segment:
+				if i.name == name:
+					return False
+		return True
 
 	def get_identifier_by_name(self, name):
 		for i in self.identifiers:
@@ -88,9 +132,6 @@ class Processor(object):
 				Processor.offset += int(string[1][:-1], 16)
 			else:
 				Processor.offset = int(string[1])
-
-			# Processor.string_for_print += hex(Processor.offset)
-
 		else:
 			Processor.nexxt = string[1]
 			if Processor.nexxt == "DB":	
@@ -103,7 +144,6 @@ class Processor(object):
 						return None
 					self.line.operand = operand
 					Processor.string_for_print += str(operand[2:]) + "\t" if len(str(operand[2:])) >= 4 or len(str(operand[2:])) % 2 == 0 else "0" + str(operand[2:]) + "\t"
-					# print str(operand[2:])
 				else:
 					text = string[2][1:-1]
 					self.line.operand = 0
@@ -111,11 +151,7 @@ class Processor(object):
 					for word in text:
 						operand = hex(ord(word))[2:]
 						Processor.string_for_print += str(operand) + " "
-					# self.line.operand =  len(u''.join([text]).encode('utf-8').strip().decode('utf-8')) 
-					# Processor.string_for_print +=  str(operand) + "\t"
 					self.line.operand_size = len(u''.join([text]).encode('utf-8').strip().decode('utf-8')) #len(text)
-				# except:
-				# 	self.set_error("Missed text constant")
 			elif Processor.nexxt == "DW":
 				#DW
 				try:
@@ -170,6 +206,7 @@ class Processor(object):
 						self.line.operation_code = hex(i["code"])
 						self.line.mrm = hex((3 << 6) | i["code"])
 					Processor.string_for_print += str(self.line.operation_code[2:]) + "\t" if len(str(self.line.operation_code)) >= 2 else "0" + str(self.line.operation_code[2:]) + "\t"
+					Processor.offset += 1
 					break
 				elif string[1] in self.useful_lexems.segment_register:
 					for j in self.useful_lexems.seg_reg:
@@ -177,9 +214,11 @@ class Processor(object):
 							if i["name"] == "PUSH":
 								self.line.operation_code = hex(0x0f)[2:]
 								self.line.mrm = 0xa0
+								Processor.offset += 1
 							elif i["name"] == "POP":
 								self.line.operation_code = hex(0x0f)[2:]
 								self.line.mrm = 0xa1
+								Processor.offset += 2
 							Processor.string_for_print += str(self.line.operation_code) + " " + str(hex(self.line.mrm)[2:]) + \
 							"\t" if len(str(self.line.operation_code)) >= 2 else "0" + str(self.line.operation_code) +  " " + \
 							str(hex(self.line.mrm)[2:]) + "\t"
@@ -188,9 +227,11 @@ class Processor(object):
 							if i["name"] == "PUSH":
 								self.line.operation_code = hex(0x0f)[2:]
 								self.line.mrm = 0xa8
+								Processor.offset += 1
 							elif i["name"] == "POP":
 								self.line.operation_code = hex(0x0f)[2:]
 								self.line.mrm = 0xa9
+								Processor.offset += 2
 							Processor.string_for_print += str(self.line.operation_code) + " " + str(hex(self.line.mrm)[2:]) + \
 							"\t" if len(str(self.line.operation_code)) >= 2 else "0" + str(self.line.operation_code) +  " " + \
 							str(hex(self.line.mrm)[2:]) + "\t"
@@ -201,8 +242,10 @@ class Processor(object):
 						elif j["name"] == string[1]:
 							if i["name"] == "PUSH":
 								self.line.operation_code = hex(j["code"] - 0x20)[2:]
+								Processor.offset += 1
 							elif i["name"] == "POP":
 								self.line.operation_code = hex(j["code"] - 0x1f)[2:]
+								Processor.offset += 2
 							Processor.string_for_print += str(self.line.operation_code) + "\t" if len(str(self.line.operation_code)) >= 2 else "0" + str(self.line.operation_code) + "\t"
 							break
 				else:
@@ -222,8 +265,10 @@ class Processor(object):
 				self.line.operation_code = i["code"] + self.get_register_adressing_mode(data0)
 				if self.get_register_adressing_mode(data0) == 1:
 					Processor.string_for_print += "66|" + " "
+					Processor.offset += 1
 				Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "
 				Processor.string_for_print += hex(self.line.mrm)[2:] + "\t" if len(hex(self.line.mrm)[2:]) >= 2 else "0" + hex(self.line.mrm)[2:] + "\t"
+				Processor.offset += 2
 
 			elif i["rule"] == "REG_MEM" and i["name"] == first_word:
 				strings = []
@@ -248,19 +293,24 @@ class Processor(object):
 					for j in self.useful_lexems.seg_reg:
 						if string[2][:-1] == "FS":
 							Processor.string_for_print += "64:" + " "
+							Processor.offset += 2
 							break
 						elif string[2][:-1] == "GS":
 							Processor.string_for_print += "65:" + " "
+							Processor.offset += 2
 							break
 						elif string[2][:-1] == j["name"]:
 							Processor.string_for_print += hex(j["code"])[2:] + ":" + " "
+							Processor.offset += 2
 				self.generate_mrm(data0, data1, i["rule"])
 				self.register_adress_mode = self.get_register_adressing_mode(data0)
 				self.line.operation_code = i["code"] + self.get_register_adressing_mode(data0)
 				if self.get_register_adressing_mode(data0) == 1:
-					Processor.string_for_print += "66|" + " "
+					# Processor.string_for_print += "66|" + " "
+					Processor.offset += 1
 				Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "
 				Processor.string_for_print += hex(self.line.mrm)[2:] + "\t" if len(hex(self.line.mrm)[2:]) >= 2 else "0" + hex(self.line.mrm)[2:] + "\t"
+				Processor.offset += 1
 
 			elif i["rule"] == "REG_REG" and i["name"] == first_word:
 				data1 = string[1][:-1]
@@ -271,11 +321,13 @@ class Processor(object):
 				if self.get_register_adressing_mode(data0) == 1 or self.get_register_adressing_mode(data1) == 1:
 					Processor.string_for_print += "66|" + " "
 					self.line.operation_code = i["code"] + 1
+					Processor.offset += 2
 				else:
 					self.line.operation_code = i["code"]
+					Processor.offset += 1
 				Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "
 				Processor.string_for_print += hex(self.line.mrm)[2:] + "\t" if len(hex(self.line.mrm)[2:]) >= 2 else "0" + hex(self.line.mrm)[2:] + "\t"
-
+				
 			elif i["rule"] == "REG_IMM" and i["name"] == first_word:
 				data1 = string[1][:-1]
 				data0 = string[2]
@@ -293,46 +345,46 @@ class Processor(object):
 						Processor.string_for_print += "66|" + " "
 						mrm = self.line.operation_code + self.get_register_position(data1)
 						self.line.operation_code += self.get_register_adressing_mode(data1) + 16	
-						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "	
+						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + "\t"	
 						Processor.string_for_print += hex(mrm)[2:] + " " if len(hex(mrm)[2:]) >= 2 else "0" + hex(mrm)[2:] + " "
 					else:
 						Processor.string_for_print += "66|" + " "
 						mrm = self.line.operation_code + self.get_register_position(data1)
 						self.line.operation_code += self.get_register_adressing_mode(data1)	
-						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "	
+						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + "\t"	
 						Processor.string_for_print += hex(mrm)[2:] + " " if len(hex(mrm)[2:]) >= 2 else "0" + hex(mrm)[2:] + " "
 						Processor.string_for_print += hex(self.line.operand)[2:] + "\t" if len(hex(self.line.operand)[2:]) % 2 == 0 else\
 						"0" + hex(self.line.operand)[2:] + "\t"
+					Processor.offset += 4
 				else:
 					if self.line.operand == 1:
 						mrm = self.line.operation_code + self.get_register_position(data1) - 8
 						self.line.operation_code += 16
-						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "
+						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + "\t"
 						Processor.string_for_print += hex(mrm)[2:] + " " if len(hex(mrm)[2:]) >= 2 else "0" + hex(mrm)[2:] + " "
 					else:
 						mrm = self.line.operation_code + self.get_register_position(data1) - 8
-						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + " "
+						Processor.string_for_print += hex(self.line.operation_code)[2:] + " " if len(hex(self.line.operation_code)[2:]) >= 2 else "0" + hex(self.line.operation_code)[2:] + "\t"
 						Processor.string_for_print += hex(mrm)[2:] + " " if len(hex(mrm)[2:]) >= 2 else "0" + hex(mrm)[2:] + " "
 						Processor.string_for_print += hex(self.line.operand)[2:] + "\t" if len(hex(self.line.operand)[2:]) % 2 == 0 else\
 						"0" + hex(self.line.operand)[2:] + "\t"
+					Processor.offset += 2
 			
 			elif i["rule"] == "ONLY_LABEL" and i["name"] == first_word:
 				if len(string) < 3 or not self.useful_lexems.is_identifier(string[1]):
 					self.set_error("ERROR: expected identifier")
 				example = self.find_identifier_by_name(string[1])
-				print string[1]
-				print "processor" + str(Processor.offset)
-				print "example" + str(example)
 				if example != None and Processor.offset > example.offset:
 					Processor.string_for_print += hex(i["code"])[2:] + " "
 					self.line.adress = 0xff - Processor.offset + example.offset - 1
-					Processor.string_for_print += hex(self.line.adress)[2:]
+					Processor.string_for_print += hex(self.line.adress)[2:] + "\t"
 				else:
 					self.line.adress = i["code"]
 					self.line.adress_size_prefix = 2
-					Processor.string_for_print += "150" + "\t"
+					Processor.string_for_print += "0F" + " " + "84" + "\t" 
 					self.line.operand_size = 4
-
+					Processor.offset += 3
+				Processor.offset += 2
 
 	def find_identifier_by_name(self, name):
 		for i in Processor.list_of_identifier:
@@ -365,6 +417,7 @@ class Processor(object):
 							  self.get_register_position(second) - 16
 						mod = 2
 						Processor.string_for_print += hex(self.line.adress_size_prefix)[2:] + "|" + " "
+						Processor.offset += 1
 					else:
 						self.set_error("ERROR: must be index or base register")
 				else:
@@ -382,9 +435,6 @@ class Processor(object):
 				rm = self.get_register_position(second)
 				if data1 == "AX":
 					rm -= 8
-
-			elif rule == "REG_IMM":
-				pass
 
 		self.line.mrm = (mod << 6) | (reg << 3) | rm
 
@@ -411,50 +461,24 @@ class Processor(object):
  			reg_pos = self.useful_lexems.registers.index(reg)
  		return reg_pos
 
-	def is_segment(self, string):
-		first_word = string[0]
-		if self.useful_lexems.is_identifier(first_word):
-			if len(first_word) > 8:
-				self.set_error("ERROR: identifier length more then 8 characters")
-			#is lable
-			# elif string[1] == ":":
-			# 	self.set_error(first_word, "L NEAR", 0)
-			#is variable
-			else:
-				Processor.nexxt = string[1]
-				if Processor.nexxt == "SEGMENT":
-					Processor.segment_value = first_word
-					Processor.offset = 0
-					return True
-
-	def is_ends(self, string):
-		first_word = string[0]
-		if self.useful_lexems.is_identifier(first_word):
-			if len(first_word) > 8:
-				self.set_error("ERROR: identifier length more then 8 characters")
-			#is lable
-			# elif string[1] == ":":
-			# 	self.set_error(first_word, "L NEAR", 0)
-			#is variable
-			else:
-				Processor.nexxt = string[1]
-				if Processor.nexxt == "ENDS":
-					Processor.segment_value = None
-					Processor.offset = 0
-					return False
 
 	def parse_string_to_line(self):
 		self.line.reset()
 		string = self.line_string
 
-		if self.is_segment(string):
-			Processor.string_for_print += "0" * (4 - int(len(hex(Processor.offset)[2:]))) + str(Processor.offset) + "\t"
-			# print "0" * (4 - int(len(str(Processor.offset)))) + str(Processor.offset) + "\t"
-		elif self.is_ends(string):
-			Processor.string_for_print += "0" * (4 - int(len(hex(Processor.offset)[2:]))) + str(Processor.offset) + "\t"
-		elif len(hex(Processor.offset)[2:]) < 4:
+		if string[1] == "SEGMENT":
+			Processor.segment_value = string[0]
+		elif string[1] == "ENDS":
+			Processor.segment_value = None
+
+		if string[1] == "SEGMENT" or string[1] == "ENDS":
+			self.table_of_segments(string[0])
+
+		if string[0] != "ASSUME" and string[0] != "ORG" and string[0] != "END":
 			Processor.string_for_print += "0" * (4 - int(len(hex(Processor.offset)[2:]))) + hex(Processor.offset)[2:] + "\t"
-			# print "0" * (4 - int(len(str(Processor.offset)))) + str(Processor.offset) + "\t",
+		elif string[0] == "ASSUME" or string[0] == "END":
+			Processor.string_for_print += "\t"
+
 		first_word = self.line_string[0]
 		if (first_word[0] != ";"):
 			if ";" in string:
@@ -465,19 +489,14 @@ class Processor(object):
 			elif first_word in self.useful_lexems.machine_commands:
 				self.parse_command(string)
 			elif self.useful_lexems.is_identifier(first_word):
+				if string[1] != ":" and string[1] == "DB" or string[1] == "DW" or string[1] == "DD":
+					self.table_of_identifiers(first_word, string[1])
 				self.parse_identifier(string)
 		self.line.line_number += 1
-
+		if first_word == "ORG":
+			Processor.string_for_print += "0" * (4 - int(len(hex(Processor.offset)[2:]))) + hex(Processor.offset)[2:] + "\t"
 		Processor.offset += int(self.line.generate_offset()) 
 		Processor.string_for_print += " ".join(string) + "\n"
-
-		# Processor.offset += self.line.operand_size
-		# self.line.offset = self.line.generate_offset()
-		# self.line.my_line.append(string)
-		# print self.line.to_string()
-		# if find_current_segment == None:
-		# 	self.line.offset = offset + 1
-		return self.line
 
 	def set_error(self, error):
 		if error != None:

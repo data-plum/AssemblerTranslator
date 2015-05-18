@@ -17,8 +17,8 @@ class Line(object):
 		self.operand_size = 0
 		self.adress_size = 0
 
-
-	def add_to_file(self, line):
+	@staticmethod
+	def add_to_file(line):
 		f = open("../Listing.lst", "w")
 		f.write(line)
 		f.close()

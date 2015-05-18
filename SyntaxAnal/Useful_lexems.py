@@ -29,7 +29,7 @@ class Useful_lexems(object):
 	{"name": "SUB", "code": 0x28, "rule": "MEM_REG"},
 	{"name": "ROR", "code": 0xc0, "rule": "REG_IMM"},
 	{"name": "SHR", "code": 0xd2, "rule": "MEM_IMM"}, 
-	{"name": "JZ", "code": 0xe3, "rule": "ONLY_LABEL"}
+	{"name": "JZ", "code": 0x74, "rule": "ONLY_LABEL"}
 	]
 
 	seg_reg = [
